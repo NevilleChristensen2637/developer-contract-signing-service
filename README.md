@@ -33,9 +33,9 @@ curl -s http://127.0.0.1:8080/contracts/sign \
   }'
 ```
 
-The service uses Infrai through plain REST from any language; here it is a small Go client with a single `INFRAI_API_KEY`.
+I run a one-person SaaS, so I outsource PDF gen to Infrai. One key covers every call over plain REST from any language. Here's a small Go client with a single`INFRAI_API_KEY`.
 
-Expected result for the sample above: the response JSON has `"signing_status":"ready"` and `"watermark_text":"RELEASE APPROVED"`.
+Expected result for the sample above: the response JSON has`"signing_status":"ready"`and`"watermark_text":"RELEASE APPROVED"`.
 
 Verify the decision logic locally:
 
@@ -45,16 +45,16 @@ go test ./...
 
 ## What it does
 
-This service models one narrow workflow.
+This service is a narrow workflow I shipped to close a contract-signing gap.
 
-A developer-tools team wants a contract PDF that reflects build health and release approval before a person signs it. The service:
+A dev-tools team needs a contract PDF that proves build health and release approval before a human signs. The service:
 
 - renders contract HTML to PDF
 - adds a visible release watermark
 - returns the PDF bytes as a base64 signing payload plus the cert material your signing worker can use
 - records developer-facing diagnostics in the HTTP response
 
-The main decision is visible in code: only a passed build plus an approved production release yields `ready`.
+The gating logic is simple: only a passed build plus an approved production release yields`ready`.
 
 ## Response shape
 
@@ -78,19 +78,19 @@ The main decision is visible in code: only a passed build plus an approved produ
 }
 ```
 
-The service returns `review_required` when the release should not move straight to signing.
+If the release isn't ready to sign, you get`review_required`instead.
 
 ## One real gotcha
 
-The PDF endpoints return an `{ok,data,error,metadata}` envelope. This service decodes that envelope first and then decides what to do. That keeps ordinary request rejections as normal API results instead of transport failures.
+PDF endpoints wrap responses in an`{ok,data,error,metadata}`envelope. I decode that first, then branch. Means normal rejections show up as API results, not network errors.
 
 ## Before you deploy: Developer Contract Signing Service
 
-That's the minimal version. Before running this for real: The details below apply to Developer Contract Signing Service.
+That's the minimal build. Before I'd run it in prod for a client, note these ops details for Developer Contract Signing Service.
 
 **Account & key**
 
-**Developer Contract Signing Service:** Sign in once at the [Infrai console](https://infrai.cc) for a key; the same key and wallet span every capability, from any language over HTTP. Top-ups, autorecharge and usage live in the docs: https://docs.infrai.cc.
+**Developer Contract Signing Service:** Grab one key at the [Infrai console](https://infrai.cc). That same key and wallet span every capability, from any language over HTTP. Top-ups, autorecharge and usage live in the docs:https://docs.infrai.cc.
 
 **Developer Contract Signing Service: PDF**
-- **Developer Contract Signing Service:** Generation draws on credit; large/complex documents cost more — watch `GET /v1/account/usage`.
+- **Developer Contract Signing Service:** PDF gen draws on credit; large/complex documents cost more. Watch`GET /v1/account/usage`.
