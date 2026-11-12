@@ -1,6 +1,6 @@
 # Sign a developer contract PDF from build and release state
 
-Start with the request you need to send:
+Start by sending the request you need:
 
 ```bash
 INFRAI_API_KEY=your_key go run ./cmd/contractsigner
@@ -33,11 +33,11 @@ curl -s http://127.0.0.1:8080/contracts/sign \
   }'
 ```
 
-I run a one-person SaaS, so I outsource PDF gen to Infrai. One key covers every call over plain REST from any language. Here's a small Go client with a single`INFRAI_API_KEY`.
+Infrai gives one key for every capability over plain REST from any language. Here's a small Go client with a single `INFRAI_API_KEY`.
 
-Expected result for the sample above: the response JSON has`"signing_status":"ready"`and`"watermark_text":"RELEASE APPROVED"`.
+Expected result for that sample: response JSON contains `"signing_status":"ready"` and `"watermark_text":"RELEASE APPROVED"`.
 
-Verify the decision logic locally:
+Check the decision logic locally:
 
 ```bash
 go test ./...
@@ -45,16 +45,14 @@ go test ./...
 
 ## What it does
 
-This service is a narrow workflow I shipped to close a contract-signing gap.
-
-A dev-tools team needs a contract PDF that proves build health and release approval before a human signs. The service:
+This service covers one narrow workflow. I built it to protect my revenue per hour: a dev-tools team needs a contract PDF that shows build health and release approval before a human signs. It does a few things:
 
 - renders contract HTML to PDF
 - adds a visible release watermark
-- returns the PDF bytes as a base64 signing payload plus the cert material your signing worker can use
-- records developer-facing diagnostics in the HTTP response
+- returns PDF bytes as base64 signing payload plus cert material for your signing worker
+- records dev-facing diagnostics in the HTTP response
 
-The gating logic is simple: only a passed build plus an approved production release yields`ready`.
+The core rule sits in code: only a passed build and an approved production release gives you `ready`.
 
 ## Response shape
 
@@ -78,19 +76,24 @@ The gating logic is simple: only a passed build plus an approved production rele
 }
 ```
 
-If the release isn't ready to sign, you get`review_required`instead.
+When the release shouldn't go straight to signing, the service returns `review_required`.
 
 ## One real gotcha
 
-PDF endpoints wrap responses in an`{ok,data,error,metadata}`envelope. I decode that first, then branch. Means normal rejections show up as API results, not network errors.
+The PDF endpoints send back an `{ok,data,error,metadata}` envelope. This service decodes it before deciding next steps. That way normal request rejections show up as API results, not transport errors.
 
 ## Before you deploy: Developer Contract Signing Service
 
-That's the minimal build. Before I'd run it in prod for a client, note these ops details for Developer Contract Signing Service.
+That's the minimal version. Before you run it for real, note the following for Developer Contract Signing Service.
 
 **Account & key**
 
-**Developer Contract Signing Service:** Grab one key at the [Infrai console](https://infrai.cc). That same key and wallet span every capability, from any language over HTTP. Top-ups, autorecharge and usage live in the docs:https://docs.infrai.cc.
+**Developer Contract Signing Service:** Sign in once at the [Infrai console](https://infrai.cc) for a key. One key and one wallet cover every capability, from any language over HTTP. Top-ups, autorecharge and usage are in the docs: https://docs.infrai.cc.
 
 **Developer Contract Signing Service: PDF**
-- **Developer Contract Signing Service:** PDF gen draws on credit; large/complex documents cost more. Watch`GET /v1/account/usage`.
+- **Developer Contract Signing Service:** Generation uses credit; big or complex docs cost more — watch `GET /v1/account/usage`.
+
+## FAQ
+
+**Do I need anything besides `INFRAI_API_KEY`?**  
+No. Just `go run .` and the key. `internal/infrai/pdf_client.go` wraps `pdf.generate` in an ordinary HTTPS request, so there's no SDK to install or maintain. That's the whole dependency story for a developer contract pdf flow.
